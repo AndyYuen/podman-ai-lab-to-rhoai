@@ -1,5 +1,9 @@
 # From Podman AI Lab to OpenShift AI
 
+Forked from https://github.com/redhat-ai-services/podman-ai-lab-to-rhoai<br /> Enhancements still...<br />
+![Under construction](img/under-construction.gif)
+
+
 **Overview**
 
 Level: Beginner

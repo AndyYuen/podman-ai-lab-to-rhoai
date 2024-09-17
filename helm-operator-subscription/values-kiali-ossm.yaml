@@ -1,0 +1,12 @@
+packageName: kiali-ossm
+
+targetNamespace: openshift-operators
+
+source: redhat-operators
+
+sourceNamespace: openshift-marketplace
+
+channel: stable
+
+# not used, included to use by shell script
+operatorName: kiali-operator
