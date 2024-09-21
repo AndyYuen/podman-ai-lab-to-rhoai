@@ -4,7 +4,7 @@ Forked from https://github.com/redhat-ai-services/podman-ai-lab-to-rhoai<br />
 
 ## Enhancements
 * Included Authorino Operator to enable external access to model server with token authentication
-* Automated OpenShift AI and other required components deployment using a shell script:
+* Automated deployment of OpenShift AI and other required components using a shell script. They include:
   * Authorino Operator
   * RHODS Operator
   * Elasticsearch Vector Database
@@ -13,7 +13,6 @@ Forked from https://github.com/redhat-ai-services/podman-ai-lab-to-rhoai<br />
   * Serverless
 * Provided an option to upload your model from Podman AI Lab to a s3 (minio) bucket for model serving using a shell script
 * fixed (Langchain and Elasticsearch Vector Database) Chat Recipe App's 'Connection error' and Langchain API change issues
-* Enhanced model server to support token authentication
 <br /><br />
 
 ## Overview
@@ -197,7 +196,7 @@ Serverless
 </li>
 
 ## Issue and Resolution
-Installation of the Service Mesh Operator failed - from 'Installed Operators->Red Hat OpenShift AI->All Instances', identify the failed instance. Drill down to the YAML view and check the error messge in the Status section near the end to see if it says “...client rate limiter Wait returned an error: context deadline exceeded...”. If so, just wait a few minutes and everything will be OK without manual intervention.
+Installation of the Service Mesh Operator failed - from the OpenShift console', select 'Operators->Installed Operators->Red Hat OpenShift AI->All Instances', identify the failed instance(s). Drill down to the YAML view and check the error messge in the status section near the end to see if it says “...client rate limiter Wait returned an error: context deadline exceeded...”. If so, just wait a few minutes and everything will be OK without manual intervention.
 
 # <div id="ingest_data">Ingest data into the Elasticsearch Vector Database</div>
  
@@ -434,6 +433,9 @@ Path = <b>mistral7b</b>
 
 ![Model Deployment 2](img/rhoai_model_serving_2.png)
 
+Note: The old screenshot above is missing the 'Model Route' section just below the 'Model server size'. Instead of redoing that screenshot, I am adding the screenshot below just containing that new section. Make sure the checkboxes are checked, otherwise the model server will only be accessible from within the OpenShift cluster. 
+![Model Route](img/model-route.jpg)
+
 ![Model Deployment 3](img/rhoai_model_serving_3.png)
 
 </li>
@@ -444,12 +446,13 @@ If your model deploys successfully you should see the following page.
 
 </li>
 <li>
-Test your model to make sure you can send in a request and get a response. The Inference Endpoint and Token Secret can be retreived here.
+Test your model to make sure you can send in a request and get a response. The Inference Endpoint and Token Secret can be retreived from your mistral7b model shown above.
 
-<br/>Make sure to update the TOKEN environment variable with the token secret and the base URL in the cURL command with the Inference endpoint shown in the screenshot above.
+<br/>Make sure to update the TOKEN environment variable with the token secret and the base URL in the cURL command with the Inference endpoint shown in the screenshot.
 
 <pre>
 TOKEN='YOUR_TOKEN-SECRET'
+
 curl -k -X POST \
 'YOUR_INFERENCE_ENDPOINT/v1/chat/completions' \
 -H 'accept: application/json' \
@@ -469,7 +472,7 @@ curl -k -X POST \
 }'  2>/dev/null |  python -m json.tool
 </pre>
 
-Your response should be similar to the following
+Your response should be similar to the following:
 
 <pre>
 {
@@ -508,7 +511,7 @@ We'll start with ./components/app/requirements.txt.
 
 ![Lock down requirements](img/app-requirements.jpg)
 
-The Lanchain API changes a lot from version to version. The newer version may not be backward compatible. We, therefore, added version constraints to the langchain packages. We also added the httpx package for use in disabling the certs verification when accessing the model server to avoid the 'Connection error'.
+The Langchain API changes a lot from version to version. The newer version may not be backward compatible. We, therefore, added version constraints to the langchain packages. We also added the <b><i>httpx</i></b> package for use in disabling the certs verification when accessing the model server to avoid the 'Connection error' due to use of self-signed certs.
 </li>
 <li>
 Open the ./components/app/chatbot_ui.py file. 
@@ -521,12 +524,12 @@ Certain Langchain APIs have moved to other packages. We have to change the impor
 
 </li>
 <li>
-We've added a 'AUTH_TOKEN' env variable since now we are using the Authorino Operator to provide token-based security.
+We've added an 'AUTH_TOKEN' environment variable since now we are using the Authorino Operator to provide token-based security.
 
 ![Chatbot Environment Variables](img/app-env-variables.jpg)
 
 </li><li>
-Next, we disable certs verification to avoid the 'Connection error' when accessing the model server and add a token for authenticaion by changing the ChatOpenAI constructor.
+Next, we disable certs verification to avoid the 'Connection error' when accessing the model server which uses self-signed certs and add token authenticaion by changing the ChatOpenAI constructor.
 
 ![Chatbot RAG](img/app-token-certs-verify.jpg)
 
@@ -534,7 +537,7 @@ Next, we disable certs verification to avoid the 'Connection error' when accessi
 
 <li>
 You can build your own image using the Containerfile and push it to your own repository or you can use my image: <br />
-quay.io/andyyuen/elastic-vectordb-chat:0.5.
+<b><i>quay.io/andyyuen/elastic-vectordb-chat:0.5.</i></b>
 </li>
 <li>
 Update the ./components/deployment.yaml file with your values for the MODEL_ENDPOINT, AUTH_TOKEN, ELASTIC_URL, and ELASTIC_PASS environment variables.
@@ -570,7 +573,7 @@ Open the application in your browser using the route obtained above.
 
 </li>
 <li>
-Type in a question and press Enter. It might take a while to respond if the model is deployed in an OpenShift cluster without GPUs. It may even time out the first time you run it. Run it a second time and it will be OK. <br />
+Since we have ingested documents related to OpenShift AI, Let's ask an OpenShift AI question. Type "What id OpenShift AI?" and press Enter. It might take a while to respond if the model is deployed in an OpenShift cluster without GPUs. It may even time out the first time you run it. Run it a second time and it will be OK. <br />
 You will see a response similar to that shown below:
 
 <img src="img/chat-out-1.png" alt="Chatbot message" style="border: 2px solid black;" />
