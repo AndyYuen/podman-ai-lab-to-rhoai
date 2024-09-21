@@ -80,12 +80,23 @@ MAGENTA="\033[1;35m"
 CYAN="\033[1;36m"
 WHITE="\033[1;37m"
 RESET="\033[0m"
+
 # -----------------------------------------
-# Deploy the OpenShift AI operator
+# Deploy the Authorino Operator
 # namespace: redhat-ods-operator
 # -----------------------------------------
 printSeparator
-echo "Deploying the OpenShift AI operator..."
+echo "Deploying the Authorino Operator..."
+oc apply -k ../components/authorino/base
+waitTillOperatorInstalled authorino-operator openshift-operators
+echo
+
+# -----------------------------------------
+# Deploy the OpenShift AI Operator
+# namespace: redhat-ods-operator
+# -----------------------------------------
+printSeparator
+echo "Deploying the OpenShift AI Operator..."
 oc apply -k ../components/openshift-ai/operator/overlays/fast
 waitTillOperatorInstalled rhods-operator redhat-ods-operator
 echo
@@ -110,6 +121,7 @@ echo
 printSeparator
 echo "Deploying Elasticsearch Vector DB..."
 oc apply -k ../components/elasticsearch/base/
+sleep 30
 waitTillPodsRunning elastic-vectordb elastic-operator-
 echo
 
@@ -132,12 +144,12 @@ echo -e "${CYAN}https://${DASHBOARD}${RESET}"
 echo
 
 # -----------------------------------------
-# Show Workbench Configmap Environment variables
+# Show Workbench Configmap Environment variables for Elasticsearch
 # -----------------------------------------
 printSeparator
 CLUSTER_IP=`oc get service elasticsearch-sample-es-http -n elastic-vectordb | tail -n +2 | awk '{print $3; }'`
 MYPASSWORD=`oc get secret elasticsearch-sample-es-elastic-user -n elastic-vectordb -o jsonpath="{.data['elastic']}" | base64 -d`
-echo "Workbench Configmap Environment variable key/value pairs:"
+echo "Workbench Configmap Environment variable key/value pairs for Elasticsearch:"
 echo -e "${CYAN}CONNECTION_STRING: ${CLUSTER_IP}:9200${RESET}"
 echo -e "${CYAN}PASSWORD: ${MYPASSWORD}${RESET}"
 echo
@@ -188,17 +200,6 @@ waitTillOperatorInstalled serverless-operator openshift-serverless
 echo
 
 # -----------------------------------------
-# Deploy Serverless Instance
-# namespace: openshift-serverless
-# -----------------------------------------
-# printSeparator
-# echo "Deploying Serverless Instance..."
-# oc apply -k ../components/openshift-serverless/instance/knative-serving/overlays/default
-# waitTillPodsRunning minio minio-
-# echo
-
-
-# -----------------------------------------
 # Create ingress-certs folder in project root
 # With files: tls.crt and tls.key
 # Use them in our OpenShift AI data science cluster,
@@ -209,7 +210,7 @@ echo "Deploying Single Model Knative Serving runtime..."
 CERTS=router-metrics-certs-default
 oc extract secret/${CERTS} -n openshift-ingress --to=ingress-certs --confirm
 oc create secret generic knative-serving-cert -n istio-system --from-file=./ingress-certs/ --dry-run=client -o yaml | oc apply -f -
-# oc apply -k ../components/model-server/components-serving
+oc apply -k ../components/model-server/components-serving
 while true 
 do
     oc get knativeserving.operator.knative.dev/knative-serving -n knative-serving | grep knative-serving | awk '{print $3;}' | grep True > /dev/null

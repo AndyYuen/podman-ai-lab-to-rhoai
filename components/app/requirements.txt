@@ -1,6 +1,8 @@
-langchain
-langchain_openai
-langchain-community
+langchain>=0.3,<0.4
+langchain-openai>=0.2,<0.3
+langchain-community>=0.3,<0.4
+langchain-huggingface>=0.1,<0.2
 streamlit
 elasticsearch
 sentence-transformers
+httpx

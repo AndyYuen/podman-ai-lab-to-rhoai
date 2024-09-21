@@ -1,47 +1,32 @@
 # From Podman AI Lab to OpenShift AI
 
-Forked from https://github.com/redhat-ai-services/podman-ai-lab-to-rhoai<br /> 
+Forked from https://github.com/redhat-ai-services/podman-ai-lab-to-rhoai<br /> Enhancements still...<br />
+![Under construction](img/under-construction.gif)
 
-## Enhancements
-* Included Authorino Operator to enable external access to model server with token authentication
-* Automated OpenShift AI and other required components deployment using a shell script:
-  * Authorino Operator
-  * RHODS Operator
-  * Elasticsearch Vector Database
-  * S3 Storage (Minio)
-  * Service Mesh
-  * Serverless
-* Provided an option to upload your model from Podman AI Lab to a s3 (minio) bucket for model serving using a shell script
-* fixed (Langchain and Elasticsearch Vector Database) Chat Recipe App's 'Connection error' and Langchain API change issues
-* Enhanced model server to support token authentication
-<br /><br />
 
-## Overview
+**Overview**
 
 Level: Beginner
 <br/>
 Time: 1 hour
 <br/>
 
-A common statement that we've been hearing from customers recently is "I want the ability to chat with my documents". Many customers are aware that Large Language Models (LLMs) provide them the ability to do that, but the implementation details are unknown as well as the possible risks. These unknowns make it difficult to understand where to start. 
-<br/>
+A common statement the we've been hearing from customers recently is "I want the ability to chat with my documents". Many customers are aware that Large Language Models (LLMs) provide them the ability to do that, but the implementation details are unknown as well as the possible risks. These unknowns make it difficult to understand where to start. 
+<br/><br/>
 Thankfully, there is a path forward with the newly released Podman AI Lab extension. Podman AI Lab allows you to pull down models and test them out locally to see how they perform and which one(s) will work best for your use case(s). The chatbot recipe within Podman AI Lab makes integrating LLMs with applications as easy as the click of a button.
 <br/><br/>
 Podman AI Lab is an excellent place to evaluate and test models, but you'll eventually want to see how this will actually be deployed in your enterprise. For that, we can use OpenShift and OpenShift AI along with the Elasticsearch vector database to create a Retrieval Augmented Generation (RAG) chatbot.
 <br/><br/>
 This article will walk you through how to go from a chatbot reciepe in the Podman AI Lab extension to a RAG chatbot deployed on OpenShift and OpenShift AI. 
-
-
-
 <br/><br/>
-## Table of Content
+
 * <a href="#arch">Architecture</a>
-* <a href="#req">Prerequisites</a>
+* <a href="#req">Requirements</a>
 * <a href="#podman_ai_lab">Podman AI Lab</a>
-* <a href="#deploy_rhoai">Deploy OpenShift AI and Friends</a>
-* <a href="#ingest_data">Ingest data into the Elasticsearch Vector Database</a>
-* <a href="#upload_model_to_minio">Upload Model to a s3 bucket (Minio)</a>
-* <a href="#custom_runtime">Create a Custom Model Serving Runtime</a>
+* <a href="#deploy_rhoai">Deploy RHOAI</a>
+* <a href="#deploy_elastic">Deploy Elasticsearch Vector DB</a>
+* <a href="#deploy_minio">Deploy s3 Storage (Minio)</a>
+* <a href="#custom_runtime">Create Custom Model Serving Runtime</a>
 * <a href="#update_chat">Update the Chat Recipe Application</a>
 
 
@@ -51,7 +36,7 @@ This article will walk you through how to go from a chatbot reciepe in the Podma
 
 <ol>
 <li>
-A LLM is downloaded through Podman AI Lab.
+An LLM is downloaded through Podman AI Lab.
 </li>
 <li>
 A chatbot recipe is started in Podman AI Lab with the downloaded model.
@@ -66,12 +51,12 @@ An ingestion notebook is run in OpenShift AI to add data to the Elasticsearch ve
 The LLM we downloaded from Podman AI Lab is deployed to OpenShift AI on a custom serving runtime.
 </li>
 <li>
-The updated chatbot with Langchain is built as a container and deployed to OpenShift.
+The updated chatbot with LangChain is built as a container and deployed to OpenShift.
 </li>
 </ol>
 
-## <div id="req">Prerequisites</a>
-It is expected that you have admin access to an OpenShift 4.16+ cluster. The follwing code was tested with an OpenShift 4.16 cluster and OpenShift AI (RHODS) 2.13.0.
+## <div id="req">Requirements</a>
+It is expected that you have admin access to an OpenShift 4.12+ cluster. The follwing code was tested with an OpenShift 4.15 cluster and OpenShift AI 2.9.
 
 # <div id="podman_ai_lab">Podman AI Lab</a>
 ## Install Podman Desktop and Podman AI Lab extension
@@ -138,7 +123,7 @@ At the bottom of the AI App Details section you'll see a <b><i>Open in VSCode</i
 </li>
 </ol>
 
-# <div id="deploy_rhoai">Deploying OpenShift AI and Friends</div>
+# <div id="deploy_rhoai">Deploying OpenShift AI</div>
 
 <ol>
 <li>
@@ -149,66 +134,51 @@ Login to your OpenShift cluster in a terminal with the API token. You can get yo
 <pre>oc login --token=<i>YOUR_OPENSHIFT_API_TOKEN</i> --server=https://<i>YOUR_OPENSHIFT_API_URL</i>:6443</pre>
 </li>
 <li>
-Change to the scripts folder and run the command:
-<pre>
-./infraSetup.sh
-</pre>
-It deploys the following:
-<ol>
-<li>
-Authorino Operator
+We'll first deploy the OpenShift AI operator.
+<pre>oc apply -k ./components/openshift-ai/operator/overlays/fast</pre>
 </li>
 <li>
-RHODS Operator
-  <ul>
-  <li>a Data Science Cluster</li>
-  <li>an ODH Dashboard</li>
-  </ul>
-</li>
+Now we'll create a Data Science Cluster. Make sure the operator is fully deployed before creating the Data Science Cluster.
+<pre>watch oc get pods -n redhat-ods-operator</pre>
 
-<li>
-Elasticsearch Vector Database
-  <ul>
-  <li>an Elasticsearch Cluster Instance</li>
-  <li>displays the connection string and password to the Elasticsearch vector database</li>
-  </ul>
-</li>
+![OpenShift AI Operator Status](img/oc_rhoai_operator_status.png)
 
-<li>
-S3 Storage (Minio)
-  <ul>
-  <li>displays the Minio Console and API URLs</li>
-  </ul>
+Once the pod has a Running status and is ready you can run the below command.
+<pre>oc apply -k ./components/openshift-ai/instance/overlays/fast</pre>
 </li>
-
-<li>
-Service Mesh
-</li>
-<li>
-Serverless
-  <ul>
-  <li>extracts ingress secret</li>
-  <li>creates a knative-serving-cert secret using the extracted secret</li>
-  <li>enables the Single Model Serving runtime for OpenShift AI</li>
-  </ul>
-</li>
-
 </ol>
+
+# <div id="deploy_elastic">Deploy Elasticsearch Vector DB</div>
+
+<ol>
+
+<li>
+We'll now deploy the Elasticsearch operator. This will be our vector database.
+
+<pre>oc apply -k ./components/elasticsearch/base/</pre>
 </li>
+<li>Now we can create an Elasticsearch cluster instance. Make sure the Elasticsearch operatior pod is in a running state and ready.
+<pre>watch oc get pods -n elastic-vectordb</pre>
 
-## Issue and Resolution
-Installation of the Service Mesh Operator failed - from 'Installed Operators->Red Hat OpenShift AI->All Instances', identify the failed instance. Drill down to the YAML view and check the error messge in the Status section near the end to see if it says “...client rate limiter Wait returned an error: context deadline exceeded...”. If so, just wait a few minutes and everything will be OK without manual intervention.
+![Elasticserach Operator Status](img/oc_elastic_operator_status.png)
 
-# <div id="ingest_data">Ingest data into the Elasticsearch Vector Database</div>
- 
+<pre>oc apply -f ./components/elasticsearch/cluster/instance.yaml</pre>
+</li>
+</ol>
+
+## Ingest data into the Elasticsearch Vector Database
 
 Now that the Elasticsearch operator has been deployed and an instance created, we can ingest some data and query the vector database.
 
 <ol>
 <li>
-Go to your OpenShift AI Dashboard. You can get the URL from the infraSetup.sh output.
+Go to your OpenShift AI Dashboard. You can get the URL either from the below oc command or the OpenShift web console.
+<pre>oc get routes -n redhat-ods-applications</pre>
+OR<br/>
 
-![RHOAI Dashboard](img/rhoai-dashboard-url.jpg)
+Select the redhat-ods-applications project, the Networking -> Routes, and then open the URL under Location.
+
+![RHOAI Dashboard](img/rhoai_dashboard_route.png)
 
 </li>
 <li>
@@ -233,21 +203,23 @@ Name the workbench <i>elastic-vectordb-workbench</i>, select a <i>Standard Data 
 You'll also want to set two environment variables so we can connect to Elasticsearch from the notebook. 
 <ul>
 <li>
-CONNECTION_STRING - available from the infraSetup.sh output.
+CONNECTION_STRING - Copy the CLUSTER-IP and PORT from this oc command
+<pre>oc get service elasticsearch-sample-es-http -n elastic-vectordb</pre>
 Add the CONNECTION_STRING key/value as a ConfigMap environment variable.
 <br/><br/>
-
-![RHOAI Configmap](img/rhoai-configmap.jpg)
 </li>
 <li>
-PASSWORD - also avaiable from the infraSetup.sh output.
-Add the PASSWORD key/value as a Secret environment variable.
+PASSWORD - Create a secret environment variable with the Elasticsearch secret value.
+<pre>oc get secret elasticsearch-sample-es-elastic-user -n elastic-vectordb -o jsonpath="{.data['elastic']}" | base64 -d > elastic_pass.txt</pre>
+Add the PASSWORD key/value as a Secret environment variable. The password is in the <b>elastic_pass.txt</b> file that was created by the above oc command.
 </li>
 </li>
 </ul>
 <br/>
 
 ![RHOAI Create Workbench](img/rhoai_workbench_2.png)
+
+<br/><b>NOTE:</b> <i>You can delete the elastic_pass.txt file that you got the password from after you add it to the environment variable.</i>
 
 Click on the <b>Create Workbench</b> button. Your workbench should start in a few minutes.
 
@@ -285,27 +257,21 @@ After all of the data is stored into our vector database we can directly query i
 </li>
 
 </ol>
-<br />
 
-# <div id="upload_model_to_minio">Upload Model to a s3 Bucket (Minio)</div>
-
+# <div id="deploy_minio">Deploy s3 Storage (Minio)</a>
 OpenShift AI model serving has a dependency on s3 storage. We'll deploy Minio for this tutorial, but any s3 compatible storage should work. For an enterprise s3 storage solution consider <a href="https://www.redhat.com/en/technologies/cloud-computing/openshift-data-foundation">OpenShift Data Foundation</a>.
-
-There are 2 ways to upload a Podman AI Lab model to Minio:
-1. Using the Minio Web Console
-2. Using the uploadModel.sh shell script
-  
-## Option 1: Using the Minio Web Console
-
 <ol>
 <li>
-Login to the Minio UI. You can find the route in the output of the infraSetup.sh.
+Make sure you're still logged into your cluster in your terminal. Run the below command to deploy Minio.
+<pre>oc apply -k ./components/minio/base</pre>
+Make sure the pod is running.
+<pre>watch oc get pods -n minio</pre>
 
-![minio web console URL](img/s3-console-url.jpg)
+![Minio Pod Status](img/minio_pod_status.png)
 
-Minio contains 2 routes, an API route and Web Console route. <br />
-
-Login using the Web Consoe route with <i>minio/minio123</i>. 
+</li>
+<li>
+Login to the Minio UI. You can find the route in either the web console or from the oc cli in your terminal. Login with <i>minio/minio123</i>. Minio contains 2 routes, an API route and UI route. Make sure you use the UI route.
 
 ![Minio Login](img/minio_login.png)
 
@@ -340,28 +306,93 @@ If the model is uploaded successfully you should see the below screen.
 </li>
 </ol>
 
-## Option 2: Using the uploadModel.sh Shell script
-Use the Minio Web Console to create a bucket named 'models' and use your favourite editor to change the s3.env (in the scripts folder) file's AWS_S3_ENDPOINT with the Miio API URL shown in the output of infraSetup.sh. <br />
+# <div id="custom_runtime">Create Custom Model Serving Runtime</div>
 
-API endpoint shown in console output:
-<br ><br />
-![minio API endpoint](img/s3-api-url.jpg)
-s3.env content after change:
+<ol>
+<li>
+We first need to enable the single serving runtime before we can add our custom serving runtime.
+<ol>
+<li>
+Run the following oc command to deploy Service Mesh.
+<pre>oc apply -k ./components/openshift-servicemesh/operator/overlays/stable</pre>
+</li>
+<li>
+Run the following oc command to deploy Serverless.
+<pre>oc apply -k ./components/openshift-serverless/operator/overlays/stable</pre>
+</li>
+<li>
+Wait until the Service Mesh and Serverless operators have installed successfully. 
+<pre>watch oc get csv -n openshift-operators</pre>
 
-![s3.env content](img/s3-env.jpg)
+![Operator Status](img/csv_status.png)
 
-Open a terminal, change to the scripts folder and run the following command:
+</li>
+<li>
+We'll be using the single stack serving in OpenShift AI so we'll want use a trusted certificate instead of a self signed one. This will allow our chatbot to access the model inference endpoint.
+<br/><br/>
+Run the below oc commands
+<ul>
+<li>
+Get the name of the ingress cert we will need to copy. Select a secret that has <b>cert</b> in the name.
 <pre>
-./uploadModel.sh hf.TheBloke.mistral-7b-instruct-v0.2.Q4_K_M mistral7b
+oc get secrets -n openshift-ingress | grep cert
 </pre>
-The model is over 4G and will take a while to upload.
-After the upload is done, use the minio Web Console to verify that you have a model in the models bucket.
-![s3 object browser](img/s3-object.jpg)
 
-# <div id="custom_runtime">Create a Custom Model Serving Runtime</div>
+![Ingress Cert Secret Name](img/ingress_cert_secret.png)
+
+</li>
+<li>
+Copy the full name of the secret and replace the name in the below oc command. Make sure you're in the top level directory of this project and run the below command.
+<pre>
+oc extract secret/<b>ingress-certs-2024-06-03</b> -n openshift-ingress --to=ingress-certs --confirm
+</pre>
+
+You should now have a <i>ingress-certs</i> directory with a tls.crt and tls.key file.
+
+![Ingress Cert Directory](img/ingress_certs_directory.png)
+
+</li>
+<li>
+We'll now update the secret that will be used in our OpenShift AI data science cluster.
+
+<pre>
+cd ingress-certs
+
+oc create secret generic knative-serving-cert -n istio-system --from-file=. --dry-run=client -o yaml | oc apply -f -
+
+cd ..
+</pre>
+<b>NOTE:</b><i>You can delete the ingress-certs folder after you have created the knative-serving-cert secret.</i>
+</li>
+</ul>
+<li>
+Run the following oc commands to enable the Single Model Serving runtime for OpenShift AI. 
+<pre>oc apply -k ./components/model-server/components-serving
+</pre>
+</li>
+<li>
+It will take around 5 to 10 minutes for the changes to be applied. Single-model serving should be ready when Service Mesh and Serverless have the below instances created. Open the OpenShift web console and go to <b>Operators -> Installed Operators</b>.
+<br/><br/>
+
+![Knative Instance](img/knative_instance.png)
+
+<br/>
+
+![Service Mesh Instance](img/servicemesh_instance.png)
+
+</li>
+</ol>
+<li>
+Go to the OpenShift AI dashboard and expand <b>Settings</b> and select <b>Serving Runtimes</b>. You should now see that Single-model serving enabled at the top of the page.
+<br/><b>NOTE:</b><i>You might need to refresh the page and it could take a few minutes for the changes to be applied.</i>
+
+![Single serving enabled](img/rhoai_single_serving_enabled.png)
+
+</li>
+</ol>
 
 ## Add a Custom Serving Runtime
-We'll now add a custom serving runtime so we can deploy the GGUF versions of models.
+We'll now add a custom serving runtime so we can deploy GGUF versions of models.
 
 <ol>
 <li>
@@ -375,10 +406,10 @@ Select <b>Single-model serving platform</b> for the runtime and select <b>REST</
 
 ![Add Serving runtime](img/rhoai_add_serving_runtime_custom.png)
 
-<b>NOTE:</b> <i>A pre-built image available to the public has been specified. You can build your own image with the Containerfile under ./components/ucstom-model-serving-runtime if you would rather pull from your own repository.</i>
+<b>NOTE:</b> <i>I've included a pre-built image that is public. You can build your own image with the Containerfile under ./components/ucstom-model-serving-runtime if you would rather pull from your own repository.</i>
 </li>
 <li>
-If the addition of the serving runtime was  succesfully, you should now see it in the list of serving runtimes available. 
+If the serving runtime was added was succesfully you should now see it in the list of serving runtimes available. 
 
 ![Serving runtime list](img/rhoai-llamacpp-runtime.png)
 
@@ -440,22 +471,16 @@ Path = <b>mistral7b</b>
 <li>
 If your model deploys successfully you should see the following page.
 
-![Deployed Model](img/model-token-secret.jpg)
+![Deployed Model](img/rhoai_deployed_model.png)
 
 </li>
 <li>
-Test your model to make sure you can send in a request and get a response. The Inference Endpoint and Token Secret can be retreived here.
+Test your model to make sure you can send in a request and get a response. You can use the client code that is provided by the model service in Podman AI Lab. 
 
-<br/>Make sure to update the TOKEN environment variable with the token secret and the base URL in the cURL command with the Inference endpoint shown in the screenshot above.
+<br/>Make sure to update the URL in the cURL command to the Inference endpoint on OpenShift AI.
 
 <pre>
-TOKEN='YOUR_TOKEN-SECRET'
-curl -k -X POST \
-'YOUR_INFERENCE_ENDPOINT/v1/chat/completions' \
--H 'accept: application/json' \
--H 'Content-Type: application/json' \
--H "Authorization: Bearer $TOKEN" \
--d '{
+curl -k --location 'https://<b>YOUR-OPENSHIFT-AI-INFERENCE-ENDPOINT</b>/v1/chat/completions' --header 'Content-Type: application/json' --data '{
   "messages": [
     {
       "content": "You are a helpful assistant.",
@@ -466,35 +491,22 @@ curl -k -X POST \
       "role": "user"
     }
   ]
-}'  2>/dev/null |  python -m json.tool
+}'
 </pre>
 
 Your response should be similar to the following
 
 <pre>
-{
-    "id": "chatcmpl-520850fe-c3e2-4aac-ad5d-7694c86f1e37",
-    "object": "chat.completion",
-    "created": 1726868958,
-    "model": "/mnt/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-    "choices": [
-        {
-            "index": 0,
-            "message": {
-                "content": " The size of a city's capital doesn't have a definitive answer as it can be described in various ways such as area (square miles or kilometers), population, or economic output. In this context, let me provide you with some facts about Paris, the capital city of France:\n\n1. Area: Paris covers an area of approximately 105 square kilometers (40.6 square miles).\n2. Population: Paris is home to over 12 million people when counting its metropolitan area. Within its administrative limits, Paris has a population of around 2.1 million residents.\n3. Economy: Paris is the economic powerhouse of France and one of Europe's leading business hubs. Its Gross Domestic Product (GDP) is estimated to be over \u20ac700 billion (US$859 billion), making it a significant global city.\n\nFeel free to ask me about any other topic or question you might have!",
-                "role": "assistant"
-            },
-            "logprobs": null,
-            "finish_reason": "stop"
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 32,
-        "completion_tokens": 206,
-        "total_tokens": 238
-    }
-}
-
+{"id":"chatcmpl-c76974b1-4709-41a5-87cf-1951e10886fe","object":"chat.completion","created":1717616440,"model":"/mnt/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf","choices":[{"index":0,
+"message":{"content":" The size of a city's area, including its metropolitan area, can vary greatly, and when referring to the 
+\"capital\" of a country like France, people usually mean the city itself rather than its total metropolitan area. Paris, the capital 
+city of France, covers an urban area of approximately 105 square 
+kilometers (40.5 square miles) within its administrative limits.
+\n\nHowever, if you are asking about the total area of the Paris 
+Metropolitana region, which includes suburban areas and their 
+combined population, it is much larger at around 13,022 square 
+kilometers (5,028 square miles). This encompasses more than just the city of Paris.",
+"role":"assistant"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":32,"completion
 </pre>
 </li>
 </ol>
@@ -504,43 +516,42 @@ We'll now update the chat recipe application that we created from Podman AI Lab 
 
 <ol>
 <li>
-We'll start with ./components/app/requirements.txt.
+We'll start from the default chatbot recipe code accessible from Podman AI Lab. In Podman AI Lab, after clicking the <b>Open in VSCode</b> button you should see the following.
 
-![Lock down requirements](img/app-requirements.jpg)
+![Chatbot in VSCode](img/chatbot_vscode.png)
 
-The Lanchain API changes a lot from version to version. The newer version may not be backward compatible. We, therefore, added version constraints to the langchain packages. We also added the httpx package for use in disabling the certs verification when accessing the model server to avoid the 'Connection error'.
+The only code we'll need to modify is under the <i>app</i> directory.
 </li>
 <li>
 Open the ./components/app/chatbot_ui.py file. 
 <br/><br/>
 <ul>
 <li>
-Certain Langchain APIs have moved to other packages. We have to change the import statements accordingly.
+We'll first get some environment variables.
 
-![Changing import statements](img/app-import-changes.jpg)
+![Chatbot Environment Variables](img/chat_app_env_vars.png)
 
 </li>
 <li>
-We've added a 'AUTH_TOKEN' env variable since now we are using the Authorino Operator to provide token-based security.
+Then we'll add in the Langchain code to give us our RAG functionality. Note the items highligted in red. Specifically where the model_service or your OpenShif AI inference endpoint URL and the Elasticsearch setup. Finally, take note of how both of these are passed to Langchain (chain).
 
-![Chatbot Environment Variables](img/app-env-variables.jpg)
-
-</li><li>
-Next, we disable certs verification to avoid the 'Connection error' when accessing the model server and add a token for authenticaion by changing the ChatOpenAI constructor.
-
-![Chatbot RAG](img/app-token-certs-verify.jpg)
+![Chatbot RAG](img/chat_app_rag.png)
 
 </li>
-
 <li>
-You can build your own image using the Containerfile and push it to your own repository or you can use my image: <br />
-quay.io/andyyuen/elastic-vectordb-chat:0.5.
+The last updates to the code are just to format the response so that the relevant documents will be included. Extra packages were also added to the ./components/app/requirements.txt file.
+</li>
+</ul>
+
 </li>
 <li>
-Update the ./components/deployment.yaml file with your values for the MODEL_ENDPOINT, AUTH_TOKEN, ELASTIC_URL, and ELASTIC_PASS environment variables.
+You can build the Containerfile and push it to your own repository or you can use the one at quay.io/jhurlocker/elastic-vectordb-chat.
+</li>
+<li>
+Update the ./components/deployment.yaml file with your values for the MODEL_ENDPOINT, ELASTIC_URL, and ELASTIC_PASS environment variables.
 <br/><br/>
 
-![Deployment Environment Variables](img/app-deployment.jpg)
+![Deployment Environment Variables](img/update_deployment_vars.png)
 
 </li>
 <li>
@@ -562,24 +573,23 @@ Get the route to the chatbot application
 oc get route -n elastic-vectordb-chat
 </pre>
 
-Open the application in your browser using the route obtained above.
+Open the application in your browser
 
 <div style="border: 2px solid black;">
-<img src="img/chat-ui.jpg" alt="Chatbot Deployed on OpenShift" />
+<img src="img/chatbot_on_openshift.png" alt="Chatbot Deployed on OpenShift" />
 </div>
 
 </li>
 <li>
-Type in a question and press Enter. It might take a while to respond if the model is deployed in an OpenShift cluster without GPUs. It may even time out the first time you run it. Run it a second time and it will be OK. <br />
-You will see a response similar to that shown below:
+Type in a message and press Enter. It might take awhile to respond if the model is deployed on a CPU.
 
-<img src="img/chat-out-1.png" alt="Chatbot message" style="border: 2px solid black;" />
+<img src="img/chatbot_on_openshift_message.png" alt="Chatbot message" style="border: 2px solid black;" />
 
 </li>
 <li>
 In the OpenShift web console you can check the model server logs under the podman-ai-lab-rag-project -> Workloads -> Pods (mistral7b-*) -> Logs. Note the log statements when a message is sent to the model inference endpoint.
 
-![Model Log](img/chat-server-log.jpg)
+![Model Log](img/model_log.png)
 
 </li>
 <li>

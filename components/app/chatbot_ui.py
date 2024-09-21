@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from langchain_community.vectorstores import ElasticsearchStore
 from elasticsearch import Elasticsearch
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain.chains import LLMChain
@@ -9,6 +9,7 @@ from langchain_community.callbacks import StreamlitCallbackHandler
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferWindowMemory
 import streamlit as st
+import httpx
 import requests
 import time
 import json
@@ -21,6 +22,7 @@ import re
 model_service = os.getenv("MODEL_ENDPOINT")
 elasticsearch_url = os.getenv("ELASTIC_URL")
 elasticsearch_pass = os.getenv("ELASTIC_PASS")
+auth_token = os.getenv("AUTH_TOKEN")
 print("--- MODEL SERVICE --- ", model_service)
 print("--- ELASTICSEARCH URL --- ", elasticsearch_url)
 
@@ -69,7 +71,7 @@ def memory():
     memory = ConversationBufferWindowMemory(return_messages=True,k=10)
     return memory
 
-model_name = "" 
+# model_name = "" 
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", "You are world class technical advisor."),
@@ -81,7 +83,9 @@ prompt = ChatPromptTemplate.from_messages([
 ## RAG CODE ADDED 
 #####################################
 llm = ChatOpenAI(
-        api_key="sk-no-key-required",
+        api_key=auth_token,
+        http_async_client=httpx.AsyncClient(verify=False),
+        http_client=httpx.Client(verify=False),
         openai_api_base=model_service,
         streaming=True,
         callbacks=[StreamlitCallbackHandler(st.empty(),

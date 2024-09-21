@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: elastic-vectordb-chat
-          image: 'quay.io/andyyuen/elastic-vectordb-chat'
+          image: 'quay.io/andyyuen/elastic-vectordb-chat:0.5'
           ports:
             - containerPort: 8080
               protocol: TCP
@@ -31,11 +31,13 @@ spec:
               protocol: TCP
           env:
             - name: MODEL_ENDPOINT
-              value: 'INFERENCE_ENDPOINT/v1/chat/completions'
+              value: 'https://mistral7b-podman-ai-lab-rag-project.apps.cluster-8tcdn.8tcdn.sandbox1612.opentlc.com'
+            - name: AUTH_TOKEN
+              value: 'eyJhbGciOiJSUzI1NiIsImtpZCI6InA0QjdkRldvUnBBNW5KblFyX3hyRFh0dUN5SEZhWS1pVmxQWXlVbTgzNFkifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJwb2RtYW4tYWktbGFiLXJhZy1wcm9qZWN0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRlZmF1bHQtbWlzdHJhbDdiLXNhIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6Im1pc3RyYWw3Yi1zYSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImE3MmIxNmNkLTlkZDgtNGRjZS04Y2NkLWE5YWNjNjYzN2ZkZiIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpwb2RtYW4tYWktbGFiLXJhZy1wcm9qZWN0Om1pc3RyYWw3Yi1zYSJ9.DBeCHf428011nLtmGeTrZzxyu3fcKovJHEt1KZ4MJYy7PCIM1WX7K6IXQN4IOSGubOBUQWztHauh4x661aNlwafaE45B4PetFJq1l2Kr4Vnw7UIRcR_1FemyB1mbbSDa7Ydk6pGh0dirCEn1URjbBLaYLdOxq63Oju-DW94ZJwkkGDpU04aKbbnnDEK5MJpY9Kj2WhOF6deFujZbwwd684N2gfmDeTMepExorvMBFRT31r8kphBk_EtL9LYNOc3IsYdRSPpGYIoA3AH3vxObMKKnDfRzBLXnGg3V3OIdQj6ViJyCicElfrmWn9ZnWFIJxQbj9lCe3-yMgr1txip8q_yqOd8WUf7FfHMQwXUPQYJIYJbSP4Vxm5yvFdQSiHZhSt7mPaaX13bdAu48s6--PZOwGP_N901Y9kJZExkLvkkj2rcItP1Ofc7glmDoJ-tq__KSc9jBYJkVgdHcMgZL2_GxRXGKVnsiWh9lwirKal5-R4veyi4ZClH3wXLmlhS-SgSuwiSxH7jMhlsJRjbImIEN007DRVpBKxY3gyIqv-D5jexVHeJAn1HEiXk3hc8TqEomWFfDydmLaQ6FrcOiqZFO3EH1pd6HT6QYQE32XCYeF1H1FzOiIW53bvjVoFjt4WsxmKCqcKyeC3K2-F4qmQsGXwdAvLaugG5hOBQvYbs'
             - name: ELASTIC_URL
-              value: 'ELASTIC_URL'
+              value: 'https://172.30.159.199:9200'
             - name: ELASTIC_PASS
-              value: 'ELASTIC_PASSWORD'
+              value: '4Xr4Mnb30nmyr8w6u27t0YE5'
           resources: {}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
