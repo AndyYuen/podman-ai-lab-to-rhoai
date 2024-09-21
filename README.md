@@ -194,9 +194,12 @@ Serverless
 
 </ol>
 </li>
+Yes, it is that simple to set up all the necessary components for this lab.
 
 ## Issue and Resolution
-Installation of the Service Mesh Operator failed - from the OpenShift console', select 'Operators->Installed Operators->Red Hat OpenShift AI->All Instances', identify the failed instance(s). Drill down to the YAML view and check the error messge in the status section near the end to see if it says “...client rate limiter Wait returned an error: context deadline exceeded...”. If so, just wait a few minutes and everything will be OK without manual intervention.
+Installation of the Service Mesh Operator failed (encountered once):
+
+To diagnose the issue, from the OpenShift console', select 'Operators->Installed Operators->Red Hat OpenShift AI->All Instances'. Identify the failed instance(s). Drill down to the YAML view and check the error message in the status section near the end to see if it says “...client rate limiter Wait returned an error: context deadline exceeded...”. If yes, just wait a few minutes and everything will be OK without manual intervention.
 
 # <div id="ingest_data">Ingest data into the Elasticsearch Vector Database</div>
  
