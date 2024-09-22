@@ -1,18 +1,19 @@
 # From Podman AI Lab to OpenShift AI
 
 Forked from https://github.com/redhat-ai-services/podman-ai-lab-to-rhoai<br /> 
+Certain sections of the original lab no longer work with the newer version of OpenShift AI. The main objective of this fork is to make everything work again and easier to get started.
 
 ## Enhancements
-* Included Authorino Operator to enable external access to model server with token authentication
+* Included the Authorino Operator to enable external access to the model server with token authentication
 * Automated deployment of OpenShift AI and other required components using a shell script. They include:
   * Authorino Operator
   * RHODS Operator
   * Elasticsearch Vector Database
-  * S3 Storage (Minio)
+  * S3 (Minio) Storage 
   * Service Mesh
   * Serverless
 * Provided an option to upload your model from Podman AI Lab to a s3 (minio) bucket for model serving using a shell script
-* fixed (Langchain and Elasticsearch Vector Database) Chat Recipe App's 'Connection error' and Langchain API change issues
+* Updated the Chat Recipe Application code and deployment.yaml file to support token-based authentication and rid of the 'Connection error' due to use of self-signed certs.
 <br /><br />
 
 ## Overview
@@ -39,7 +40,7 @@ This article will walk you through how to go from a chatbot reciepe in the Podma
 * <a href="#podman_ai_lab">Podman AI Lab</a>
 * <a href="#deploy_rhoai">Deploy OpenShift AI and Friends</a>
 * <a href="#ingest_data">Ingest data into the Elasticsearch Vector Database</a>
-* <a href="#upload_model_to_minio">Upload Model to a s3 bucket (Minio)</a>
+* <a href="#upload_model_to_minio">Upload Model to a s3 (Minio) bucket</a>
 * <a href="#custom_runtime">Create a Custom Model Serving Runtime</a>
 * <a href="#update_chat">Update the Chat Recipe Application</a>
 
@@ -161,7 +162,7 @@ Authorino Operator
 RHODS Operator
   <ul>
   <li>a Data Science Cluster</li>
-  <li>an ODH Dashboard</li>
+  <li>an OpenShift AI Dashboard</li>
   </ul>
 </li>
 
@@ -174,7 +175,7 @@ Elasticsearch Vector Database
 </li>
 
 <li>
-S3 Storage (Minio)
+S3 (Minio) Storage
   <ul>
   <li>displays the Minio Console and API URLs</li>
   </ul>
@@ -197,7 +198,7 @@ Serverless
 Yes, it is that simple to set up all the necessary components for this lab.
 
 ## Issue and Resolution
-Installation of the Service Mesh Operator failed (encountered once):
+Installation of the Service Mesh Operator failed (encountered only once):
 
 To diagnose the issue, from the OpenShift console', select 'Operators->Installed Operators->Red Hat OpenShift AI->All Instances'. Identify the failed instance(s). Drill down to the YAML view and check the error message in the status section near the end to see if it says “...client rate limiter Wait returned an error: context deadline exceeded...”. If yes, just wait a few minutes and everything will be OK without manual intervention.
 
@@ -289,7 +290,7 @@ After all of the data is stored into our vector database we can directly query i
 </ol>
 <br />
 
-# <div id="upload_model_to_minio">Upload Model to a s3 Bucket (Minio)</div>
+# <div id="upload_model_to_minio">Upload Model to a s3 (Minio) Bucket</div>
 
 OpenShift AI model serving has a dependency on s3 storage. We'll deploy Minio for this tutorial, but any s3 compatible storage should work. For an enterprise s3 storage solution consider <a href="https://www.redhat.com/en/technologies/cloud-computing/openshift-data-foundation">OpenShift Data Foundation</a>.
 
@@ -343,7 +344,7 @@ If the model is uploaded successfully you should see the below screen.
 </ol>
 
 ## Option 2: Using the uploadModel.sh Shell script
-Use the Minio Web Console to create a bucket named 'models' and use your favourite editor to change the s3.env (in the scripts folder) file's AWS_S3_ENDPOINT with the Miio API URL shown in the output of infraSetup.sh. <br />
+Use the Minio Web Console to create a bucket named 'models' and use your favourite editor to change the s3.env (in the scripts folder) file's AWS_S3_ENDPOINT with the Minio API URL shown in the output of infraSetup.sh. <br />
 
 API endpoint shown in console output:
 <br ><br />
@@ -356,14 +357,14 @@ Open a terminal, change to the scripts folder and run the following command:
 <pre>
 ./uploadModel.sh hf.TheBloke.mistral-7b-instruct-v0.2.Q4_K_M mistral7b
 </pre>
-The model is over 4G and will take a while to upload.
+The model is over 4G in size and will take a while to upload. Time to have another coffee!
 After the upload is done, use the minio Web Console to verify that you have a model in the models bucket.
 ![s3 object browser](img/s3-object.jpg)
 
 # <div id="custom_runtime">Create a Custom Model Serving Runtime</div>
 
 ## Add a Custom Serving Runtime
-We'll now add a custom serving runtime so we can deploy the GGUF versions of models.
+We'll now add a custom serving runtime so we can deploy the model just uploaded.
 
 <ol>
 <li>
@@ -377,7 +378,7 @@ Select <b>Single-model serving platform</b> for the runtime and select <b>REST</
 
 ![Add Serving runtime](img/rhoai_add_serving_runtime_custom.png)
 
-<b>NOTE:</b> <i>A pre-built image available to the public has been specified. You can build your own image with the Containerfile under ./components/ucstom-model-serving-runtime if you would rather pull from your own repository.</i>
+<b>NOTE:</b> <i>A pre-built image has been specified. You can build your own image with the Containerfile under ./components/custom-model-serving-runtime if you would rather pull from your own repository.</i>
 </li>
 <li>
 If the addition of the serving runtime was  succesfully, you should now see it in the list of serving runtimes available. 
@@ -431,12 +432,14 @@ Bucket = <b>models</b>
 Path = <b>mistral7b</b>
 </li>
 </ul>
+<b>NOTE:</b> <i>The waring at the top "Token authorization not installed" should not appear with the Authorino Operator installed. This image was taken from the original repo without Authorino.</i>
 
 ![Model Deployment 1](img/rhoai_model_serving_1.png)
 
 ![Model Deployment 2](img/rhoai_model_serving_2.png)
 
-Note: The old screenshot above is missing the 'Model Route' section just below the 'Model server size'. Instead of redoing that screenshot, I am adding the screenshot below just containing that new section. Make sure the checkboxes are checked, otherwise the model server will only be accessible from within the OpenShift cluster. 
+<b>Note:</b> <i>The old screenshot above is missing the 'Model Route' section just below the 'Model server size'. Instead of redoing that screenshot, I am adding the screenshot below just containing that new section. This section only appears when the Authorino Operator has been installed. Make sure the checkboxes are checked, otherwise the model server will only be accessible from within the OpenShift cluster.</i>
+
 ![Model Route](img/model-route.jpg)
 
 ![Model Deployment 3](img/rhoai_model_serving_3.png)
@@ -514,7 +517,7 @@ We'll start with ./components/app/requirements.txt.
 
 ![Lock down requirements](img/app-requirements.jpg)
 
-The Langchain API changes a lot from version to version. The newer version may not be backward compatible. We, therefore, added version constraints to the langchain packages. We also added the <b><i>httpx</i></b> package for use in disabling the certs verification when accessing the model server to avoid the 'Connection error' due to use of self-signed certs.
+The Langchain APsI change a lot from version to version. A newer version may not be backward compatible. We, therefore, added version constraints to the langchain packages. We also added the <b><i>httpx</i></b> package for use in disabling the certs verification when accessing the model server to avoid the 'Connection error' due to use of self-signed certs.
 </li>
 <li>
 Open the ./components/app/chatbot_ui.py file. 
@@ -527,19 +530,19 @@ Certain Langchain APIs have moved to other packages. We have to change the impor
 
 </li>
 <li>
-We've added an 'AUTH_TOKEN' environment variable since now we are using the Authorino Operator to provide token-based security.
+We've added an 'AUTH_TOKEN' environment variable since now we are using the Authorino Operator to provide token-based authentication.
 
 ![Chatbot Environment Variables](img/app-env-variables.jpg)
 
 </li><li>
-Next, we disable certs verification to avoid the 'Connection error' when accessing the model server which uses self-signed certs and add token authenticaion by changing the ChatOpenAI constructor.
+Next, we disabled certs verification to avoid the 'Connection error' when accessing our model server which uses self-signed certs and added token authenticaion by changing the ChatOpenAI constructor.
 
 ![Chatbot RAG](img/app-token-certs-verify.jpg)
 
 </li>
 
 <li>
-You can build your own image using the Containerfile and push it to your own repository or you can use my image: <br />
+You can build your own image using the Containerfile and push it to your own repository or you can use a prebuilt image: <br />
 <b><i>quay.io/andyyuen/elastic-vectordb-chat:0.5.</i></b>
 </li>
 <li>
@@ -568,7 +571,7 @@ Get the route to the chatbot application
 oc get route -n elastic-vectordb-chat
 </pre>
 
-Open the application in your browser using the route obtained above.
+Open the chat application in your browser using the route obtained above.
 
 <div style="border: 2px solid black;">
 <img src="img/chat-ui.jpg" alt="Chatbot Deployed on OpenShift" />
@@ -576,7 +579,7 @@ Open the application in your browser using the route obtained above.
 
 </li>
 <li>
-Since we have ingested documents related to OpenShift AI, Let's ask an OpenShift AI question. Type "What id OpenShift AI?" and press Enter. It might take a while to respond if the model is deployed in an OpenShift cluster without GPUs. It may even time out the first time you run it. Run it a second time and it will be OK. <br />
+Since we have ingested documents related to OpenShift AI, let's ask an OpenShift AI question. Type "What is OpenShift AI?" and press Enter. It might take a while to respond if the model is deployed in an OpenShift cluster without GPUs. It may even time out the first time you run it. Run it a second time and it will be OK. <br />
 You will see a response similar to that shown below:
 
 <img src="img/chat-out-1.png" alt="Chatbot message" style="border: 2px solid black;" />
