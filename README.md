@@ -1,19 +1,29 @@
 # From Podman AI Lab to OpenShift AI
 
 Forked from https://github.com/redhat-ai-services/podman-ai-lab-to-rhoai<br /> 
-Certain sections of the original lab no longer work with the newer version of OpenShift AI. The main objective of this fork is to make everything work again and easier to get started.
+
+This was a great lab but certain sections of the original lab no longer work with the newer version of OpenShift AI:
+
+* Especially the sections to do with the interacting with the deployed model server.
+* It now requires the Authorino Operator to access the model server from outside of the OpenShift cluster using token authentication
+* Connection to the model server fails with “connection error” due to use of self-signed certs
+
+The main objective of this fork is to make everything work again and easier to get started.
+
 
 ## Enhancements
-* Included the Authorino Operator to enable external access to the model server with token authentication
-* Automated deployment of OpenShift AI and other required components using a shell script. They include:
+The enhancements include:
+* Deployment of the Authorino Operator to enable external access to the model server with token authentication
+* Automated deployment of the OpenShift AI and other required components using a shell script:
   * Authorino Operator
   * RHODS Operator
   * Elasticsearch Vector Database
-  * S3 (Minio) Storage 
+  * S3 Storage (Minio)
   * Service Mesh
   * Serverless
-* Provided an option to upload your model from Podman AI Lab to a s3 (minio) bucket for model serving using a shell script
-* Updated the Chat Recipe Application code and deployment.yaml file to support token-based authentication and rid of the 'Connection error' due to use of self-signed certs.
+* An option to upload your model from Podman AI Lab to a s3 (minio) bucket for model serving using a shell script
+* Fixing the Chat Recipe App's 'Connection error' and updating its Langchain API imports in chatbot_ui.py
+* Updated the Chat Recipe App's chatbot_ui.py and deployment.yaml to support token authentication
 <br /><br />
 
 ## Overview
